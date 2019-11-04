@@ -5,10 +5,6 @@ $(function() {
   // Our interface to the Chat service
   var chatClient;
 
-  // A handle to the "general" chat channel - the one and only channel we
-  // will have in this sample app
-  var generalChannel;
-
   // The server will assign the client a random username - store that value
   // here
   var username;
@@ -23,6 +19,8 @@ $(function() {
     }
     $chatWindow.append($msg);
   }
+
+  window.printLog = print;
 
   // Helper function to print chat message to the chat window
   function printMessage(fromUser, message) {
@@ -43,21 +41,28 @@ $(function() {
   // Get an access token for the current user, passing a username (identity)
   // and a device ID - for browser-based apps, we'll always just use the
   // value "browser"
-  $.getJSON('/token', {
+  $.getJSON('/token/TestUser', {
     device: 'browser'
   }, function(data) {
 
-
     // Initialize the Chat client
-    Twilio.Chat.Client.create(data.token).then(client => {
+    Twilio.Chat.Client.create(data.token, {logLevel: 'trace'}).then(client => {
       console.log('Created chat client');
       chatClient = client;
-      chatClient.getSubscribedChannels().then(createOrJoinGeneralChannel);
+      chatClient.on('connectionStateChanged', state => {
+        print(state, false);
+      });
 
-    // Alert the user they have been assigned a random username
-    username = data.identity;
-    print('You have been assigned a random username of: '
-    + '<span class="me">' + username + '</span>', true);
+      // Paginate a bunch (~600) of joined channels.. this will kill websocket on Safari 13
+      chatClient.getSubscribedChannels().then(page => parsePage(page)).catch(error => {
+        console.error(error);
+        print(error, false);
+      });
+
+      // Alert the user they have been assigned a username
+      username = data.identity;
+      print('You have been assigned a username of: '
+      + '<span class="me">' + username + '</span>', true);
 
     }).catch(error => {
       console.error(error);
@@ -66,59 +71,27 @@ $(function() {
     });
   });
 
-  function createOrJoinGeneralChannel() {
-    // Get the general chat channel, which is where all the messages are
-    // sent in this simple application
-    print('Attempting to join "general" chat channel...');
-    chatClient.getChannelByUniqueName('general')
-    .then(function(channel) {
-      generalChannel = channel;
-      console.log('Found general channel:');
-      console.log(generalChannel);
-      setupChannel();
-    }).catch(function() {
-      // If it doesn't exist, let's create it
-      console.log('Creating general channel');
-      chatClient.createChannel({
-        uniqueName: 'general',
-        friendlyName: 'General Chat Channel'
-      }).then(function(channel) {
-        console.log('Created general channel:');
-        console.log(channel);
-        generalChannel = channel;
-        setupChannel();
-      }).catch(function(channel) {
-        console.log('Channel could not be created:');
-        console.log(channel);
+  // Create and join channels prior to websocket test
+  function populateChannels() {
+    for (var ch = 0; ch < 600; ch++) {
+      chatClient.createChannel({isPrivate: true, uniqueName: 'testChannel'+ch}).then(channel => {
+        channel.join().then(channel => { console.log("Joined channel "+ch); });
       });
-    });
-  }
-
-  // Set up channel after it has been found
-  function setupChannel() {
-    // Join the general channel
-    generalChannel.join().then(function(channel) {
-      print('Joined channel as '
-      + '<span class="me">' + username + '</span>.', true);
-    });
-
-    // Listen for new messages sent to the channel
-    generalChannel.on('messageAdded', function(message) {
-      printMessage(message.author, message.body);
-    });
-  }
-
-  // Send a new message to the general channel
-  var $input = $('#chat-input');
-  $input.on('keydown', function(e) {
-
-    if (e.keyCode == 13) {
-      if (generalChannel === undefined) {
-        print('The Chat Service is not configured. Please check your .env file.', false);
-        return;
-      }
-      generalChannel.sendMessage($input.val())
-      $input.val('');
     }
+  }
+
+  function parsePage(paginator, process) {
+    if (!process) { process = console.log; }
+    paginator.items.forEach(item => {
+        process(item);
+    });
+    if (paginator.hasNextPage) {
+        paginator.nextPage().then(next => parsePage(next, process));
+    }
+  }
+
+  var $btn = $('#create-btn');
+  $btn.on('click', function(e) {
+    populateChannels();
   });
 });

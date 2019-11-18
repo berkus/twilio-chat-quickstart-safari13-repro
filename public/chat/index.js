@@ -73,11 +73,18 @@ $(function() {
 
   // Create and join channels prior to websocket test
   function populateChannels() {
-    for (var ch = 0; ch < 600; ch++) {
-      chatClient.createChannel({isPrivate: true, uniqueName: 'testChannel'+ch}).then(channel => {
-        channel.join().then(channel => { console.log("Joined channel "+ch); });
+    populateChannel(600);
+  }
+
+  function populateChannel(ch) {
+    chatClient.createChannel({isPrivate: true, uniqueName: 'testChannel'+ch}).then(channel => {
+      channel.join().then(channel => {
+        console.log("Joined channel "+ch);
+        if (ch > 0) {
+          setTimeout(() => { populateChannel(ch-1); }, 2000);
+        }
       });
-    }
+    });
   }
 
   function parsePage(paginator, process) {

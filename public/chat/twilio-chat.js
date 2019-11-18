@@ -17080,7 +17080,7 @@ var Configuration = function () {
         (0, _classCallCheck3.default)(this, Configuration);
 
         var config = options.notifications || {};
-        var region = config.region || options.region || 'us1';
+        var region = config.region || options.region || 'dev-us1';
         var defaultUrl = "https://ers." + region + ".twilio.com/v1/registrations";
         this.registrarUrl = config.ersUrl || defaultUrl;
         this._token = token;
@@ -19612,7 +19612,7 @@ var Configuration = function () {
         var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
         (0, _classCallCheck3.default)(this, Configuration);
 
-        var region = options.region || 'us1';
+        var region = options.region || 'dev-us1';
         var defaultCdsUrl = "https://cds." + region + ".twilio.com";
         var baseUri = options.cdsUri || defaultCdsUrl;
         this.settings = {
@@ -28282,7 +28282,7 @@ var Configuration = function () {
 
         this.activeGrant = activeGrant;
         this._token = token;
-        var region = options.region || 'us1';
+        var region = options.region || 'dev-us1';
         var defaultTwilsockUrl = "wss://tsock." + region + ".twilio.com/v3/wsconnect";
         var twilsockOptions = options.twilsock || options.Twilsock || {};
         this.url = twilsockOptions.uri || defaultTwilsockUrl;
